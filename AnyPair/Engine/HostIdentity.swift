@@ -64,12 +64,8 @@ struct HostIdentity: Codable, Equatable {
         [0x14, 0x7D, 0xDA], [0xBC, 0xD0, 0x74], [0x5C, 0xE9, 0x1E], [0xF8, 0x4D, 0x89],
     ]
 
-    /// Apple-silicon chip IDs used as the first part of a Mac UDID.
-    private static let chipIDs = ["00008103", "00008112", "00008122", "00008132", "00006000", "00006020", "00006030"]
-
-    /// Modern Apple serials: 10 characters, no vowels that look like digits.
+    /// Serial: 12 characters (same length as the default), no vowels that look like digits.
     private static let serialAlphabet = Array("BCDFGHJKLMNPQRTVWXYZ0123456789")
-    private static let hexAlphabet = Array("0123456789ABCDEF")
 
     /// A new random identity. None of its values repeat `previous`.
     static func random(excluding previous: HostIdentity? = nil) -> HostIdentity {
@@ -82,17 +78,16 @@ struct HostIdentity: Codable, Equatable {
                 name: "\(mac.name) \(suffix)",
                 model: mac.model,
                 identifier: UUID().uuidString.lowercased(),
-                serialNumber: String((0..<10).map { _ in serialAlphabet.randomElement(using: &rng)! }),
+                serialNumber: String((0..<12).map { _ in serialAlphabet.randomElement(using: &rng)! }),
                 mac: oui + (0..<3).map { _ in UInt8.random(in: 0...255, using: &rng) },
-                udid: chipIDs.randomElement(using: &rng)! + "-" + String((0..<16).map { _ in hexAlphabet.randomElement(using: &rng)! })
+                udid: nil
             )
             guard let previous else { return identity }
             if identity.name != previous.name,
                identity.model != previous.model,
                identity.identifier != previous.identifier,
                identity.serialNumber != previous.serialNumber,
-               identity.mac != previous.mac,
-               identity.udid != previous.udid {
+               identity.mac != previous.mac {
                 return identity
             }
         }

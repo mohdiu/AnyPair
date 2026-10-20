@@ -78,6 +78,9 @@ struct PairView: View {
                     .font(.title)
                     .foregroundStyle(.secondary)
             case .awaitingPIN(let pin):
+                Text(tr("أدخل هذا الرمز في الإعدادات", "Enter this code in Settings"))
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
                 Text(pin.bidiIsolated)
                     .font(.system(size: 60, weight: .bold, design: .rounded))
                     .tracking(10)

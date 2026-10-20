@@ -36,6 +36,15 @@ struct FilesView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(tr("إغلاق", "Close")) { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        fileAction = .share(PairingLog.url)
+                    } label: {
+                        Image(systemName: "doc.text.magnifyingglass")
+                    }
+                    .accessibilityLabel(tr("السجل", "Log"))
+                    .disabled(!FileManager.default.fileExists(atPath: PairingLog.url.path))
+                }
             }
         }
         .onAppear { store.load() }

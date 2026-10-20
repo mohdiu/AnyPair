@@ -1,8 +1,8 @@
 # AnyPair
 
-**Version 1.1.0**
+**Version 1.2.0**
 
-[**Download IPA · v1.1.0**](https://github.com/mohdiu/AnyPair/releases/download/v1.1.0/AnyPair-1.1.0.ipa)
+[**Download IPA · v1.2.0**](https://github.com/mohdiu/AnyPair/releases/download/v1.2.0/AnyPair-1.2.0.ipa)
 
 [English](#english) · [العربية](#العربية)
 
@@ -13,10 +13,10 @@ AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+
 ### Features
 
 - Pair from the phone itself: AnyPair shows up in **Settings → Privacy & Security → Developer Mode → Other Devices**.
-- **Random values for each pairing** (on by default): a new name, Mac model, serial number, MAC address, UDID and identifier every time — instead of the fixed `AAAAAAAAAAAA` / `11:22:33:44:55:66` — and never the same values as the previous pairing.
+- **Random values for each pairing** (on by default): a new name, Mac model, serial number, MAC address and identifier every time — instead of the fixed `AAAAAAAAAAAA` / `11:22:33:44:55:66` — and never the same values as the previous pairing.
 - After pairing it asks whether to **share** the file or **save it to Files**. Every file is also kept in the app and in Files → On My iPhone → AnyPair.
 - Random, editable name (🎲 makes a new one each tap), so every pairing shows up separately in Developer Mode.
-- Live Activity (Dynamic Island / Lock Screen): waiting → the 6-digit code → done.
+- The 6-digit code arrives as a notification while you are in Settings.
 - Background keep-alive (silent audio / location) so the code still arrives while you are in Settings.
 - Arabic and English interface.
 
@@ -30,7 +30,7 @@ AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+
 
 ### Use
 
-1. Open AnyPair → **Pair**, and allow Location, Notifications and Local Network.
+1. Open AnyPair → **Pair**, and allow Notifications and Local Network.
 2. Open **Settings → Privacy & Security → Developer Mode**, and under **Other Devices** tap **Pair with …** (the name shown in AnyPair).
 3. Enter your passcode, then the 6-digit code from AnyPair (also sent as a notification).
 4. Choose **Share** or **Save to Files**.
@@ -59,10 +59,10 @@ xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
 ### المميزات
 
 - الإقران من الجوال نفسه: يظهر <span dir="ltr">AnyPair</span> في **الإعدادات ← الخصوصية والأمن ← نمط المطور ← الأجهزة الأخرى**.
-- **قيم عشوائية لكل إقران** (مفعّلة افتراضيًا): اسم وموديل ماك ورقم تسلسلي وعنوان <span dir="ltr">MAC</span> و<span dir="ltr">UDID</span> ومعرّف جديد في كل مرة بدل القيم الثابتة <span dir="ltr">`AAAAAAAAAAAA`</span> — ولا تتكرر قيم الإقران السابق.
+- **قيم عشوائية لكل إقران** (مفعّلة افتراضيًا): اسم وموديل ماك ورقم تسلسلي وعنوان <span dir="ltr">MAC</span> ومعرّف جديد في كل مرة بدل القيم الثابتة <span dir="ltr">`AAAAAAAAAAAA`</span> — ولا تتكرر قيم الإقران السابق.
 - بعد الإقران يسألك: تبي **تشارك** الملف أو **تحفظه في الملفات**؟ وكل ملف محفوظ أيضًا داخل التطبيق وفي تطبيق الملفات ← على الآيفون ← <span dir="ltr">AnyPair</span>.
 - اسم عشوائي تقدر تعدّله (🎲 يولّد اسم جديد كل ضغطة)، عشان كل إقران يظهر باسم مختلف في نمط المطور.
-- نشاط مباشر (الجزيرة الديناميكية / شاشة القفل): انتظار ← الرمز المكوّن من 6 أرقام ← تم.
+- الرمز المكوّن من 6 أرقام يوصلك كإشعار وأنت في الإعدادات.
 - البقاء في الخلفية (صوت صامت / الموقع) عشان يوصل الرمز وأنت في الإعدادات.
 - واجهة عربي وإنجليزي.
 
@@ -76,7 +76,7 @@ xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
 
 ### الاستخدام
 
-1. افتح <span dir="ltr">AnyPair</span> ← **إقران**، ووافق على الموقع والإشعارات والشبكة المحلية.
+1. افتح <span dir="ltr">AnyPair</span> ← **إقران**، ووافق على الإشعارات والشبكة المحلية.
 2. افتح **الإعدادات ← الخصوصية والأمن ← نمط المطور**، وتحت **الأجهزة الأخرى** اضغط **<span dir="ltr">Pair with …</span>** (الاسم الظاهر في التطبيق).
 3. أدخل رمز قفل الجهاز، ثم الرمز المكوّن من 6 أرقام من <span dir="ltr">AnyPair</span> (يوصلك كإشعار بعد).
 4. اختر **مشاركة** أو **حفظ في الملفات**.

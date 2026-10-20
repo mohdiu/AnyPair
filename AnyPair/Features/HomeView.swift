@@ -4,7 +4,7 @@ struct HomeView: View {
     @EnvironmentObject private var store: PairingFileStore
 
     @AppStorage("anypair.keepAlive.audio") private var useAudio = true
-    @AppStorage("anypair.keepAlive.location") private var useLocation = true
+    @AppStorage("anypair.keepAlive.location") private var useLocation = false
     @AppStorage(AppLanguage.defaultsKey) private var language = AppLanguage.system.rawValue
 
     @State private var next = HostIdentity.random(excluding: HostIdentity.lastUsed)
@@ -139,7 +139,6 @@ struct IdentityRows: View {
             row(tr("الرقم التسلسلي", "Serial"), identity.serialString)
             row("MAC", identity.macString)
             row(tr("المعرّف", "Identifier"), identity.identifier ?? "—")
-            row("UDID", identity.udid ?? "—")
         }
         .font(.footnote)
     }
