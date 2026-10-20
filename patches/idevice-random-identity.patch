@@ -1,0 +1,162 @@
+diff --git a/ffi/src/pairing_host.rs b/ffi/src/pairing_host.rs
+index e5e56b5..c7b1c08 100644
+--- a/ffi/src/pairing_host.rs
++++ b/ffi/src/pairing_host.rs
+@@ -138,6 +138,112 @@ pub unsafe extern "C" fn pairable_host_prepare(
+     null_mut()
+ }
+ 
++/// Like `pairable_host_prepare`, but lets the caller choose the identity values the
++/// device stores for this host, so every pairing can look like a different computer.
++///
++/// Any of `identifier`, `serial_number`, `mac` and `udid` may be NULL to keep the
++/// library default. `identifier` is used as the pairing-file identifier and Bonjour
++/// service name (normally derived from `name`). `mac` must point to 6 bytes.
++///
++/// # Safety
++/// Same requirements as `pairable_host_prepare`. Non-NULL string arguments must be
++/// valid null-terminated C strings and `mac` must point to at least 6 readable bytes.
++#[unsafe(no_mangle)]
++#[allow(clippy::too_many_arguments)]
++pub unsafe extern "C" fn pairable_host_prepare_custom(
++    name: *const c_char,
++    model: *const c_char,
++    identifier: *const c_char,
++    serial_number: *const c_char,
++    mac: *const u8,
++    udid: *const c_char,
++    out_handle: *mut *mut PairableHostHandle,
++    out_service_id: *mut *mut c_char,
++    out_txt_data: *mut *mut u8,
++    out_txt_len: *mut usize,
++    out_host_alt_irk: *mut u8,
++) -> *mut IdeviceFfiError {
++    if name.is_null()
++        || out_handle.is_null()
++        || out_service_id.is_null()
++        || out_txt_data.is_null()
++        || out_txt_len.is_null()
++    {
++        return ffi_err!(IdeviceError::FfiInvalidArg);
++    }
++
++    let opt = |p: *const c_char| -> Result<Option<String>, ()> {
++        if p.is_null() {
++            return Ok(None);
++        }
++        unsafe { CStr::from_ptr(p) }
++            .to_str()
++            .map(|s| Some(s.to_string()))
++            .map_err(|_| ())
++    };
++    let (Ok(Some(name)), Ok(model), Ok(identifier), Ok(serial_number), Ok(udid)) = (
++        opt(name),
++        opt(model),
++        opt(identifier),
++        opt(serial_number),
++        opt(udid),
++    ) else {
++        return ffi_err!(IdeviceError::FfiInvalidString);
++    };
++    let model = model.unwrap_or_else(|| "Mac17,7".to_string());
++
++    let mut pairing_file = RpPairingFile::generate(&name);
++    let mut host_info = PairableHostInfo::generate(&name, &model);
++    if let Some(identifier) = identifier {
++        pairing_file.identifier = identifier;
++    }
++    if let Some(serial_number) = serial_number {
++        host_info.serial_number = serial_number;
++    }
++    if !mac.is_null() {
++        unsafe { std::ptr::copy_nonoverlapping(mac, host_info.mac.as_mut_ptr(), 6) };
++    }
++    if let Some(udid) = udid {
++        host_info.udid = udid;
++    }
++    let service_id = pairing_file.identifier.clone();
++
++    let mut dict = plist::Dictionary::new();
++    for (key, value) in host_info.mdns_txt_records(&service_id) {
++        dict.insert(key, plist::Value::String(value));
++    }
++    let mut txt = Vec::new();
++    if let Err(e) = plist::to_writer_xml(&mut txt, &plist::Value::Dictionary(dict)) {
++        return ffi_err!(IdeviceError::InternalError(format!(
++            "failed to encode TXT records: {e}"
++        )));
++    }
++    let Ok(service_id) = CString::new(service_id) else {
++        return ffi_err!(IdeviceError::FfiInvalidString);
++    };
++
++    if !out_host_alt_irk.is_null() {
++        unsafe {
++            std::ptr::copy_nonoverlapping(host_info.alt_irk.as_ptr(), out_host_alt_irk, 16);
++        }
++    }
++
++    // `idevice_data_free` rebuilds the Vec with capacity == len.
++    let txt = txt.into_boxed_slice();
++    let len = txt.len();
++    let ptr = Box::into_raw(txt) as *mut u8;
++    unsafe {
++        *out_handle = Box::into_raw(Box::new(PairableHostHandle {
++            pairing_file,
++            host_info,
++        }));
++        *out_service_id = service_id.into_raw();
++        *out_txt_data = ptr;
++        *out_txt_len = len;
++    }
++    null_mut()
++}
++
+ /// Backwards-compatible alias for AltStore's original function name.
+ /// Prefer `pairable_host_prepare` for new callers.
+ ///
+diff --git a/idevice/src/remote_pairing/responder.rs b/idevice/src/remote_pairing/responder.rs
+index 891cfdb..923e3da 100644
+--- a/idevice/src/remote_pairing/responder.rs
++++ b/idevice/src/remote_pairing/responder.rs
+@@ -67,6 +67,10 @@ pub struct PairableHostInfo {
+     /// Advertise pinless pairing support. When enabled, pair-setup uses Apple's
+     /// conventional all-zero setup code instead of a user-entered random PIN.
+     pub allows_pinless_pairing: bool,
++    /// Serial number sent to the device in the M6 accessory info.
++    pub serial_number: String,
++    /// MAC / Bluetooth address sent to the device in the M6 accessory info.
++    pub mac: [u8; 6],
+ }
+ 
+ impl PairableHostInfo {
+@@ -118,6 +122,8 @@ impl Default for PairableHostInfo {
+             wire_protocol_version: 26,
+             alt_irk: [0u8; 16],
+             allows_pinless_pairing: false,
++            serial_number: "AAAAAAAAAAAA".to_string(),
++            mac: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
+         }
+     }
+ }
+@@ -435,11 +441,17 @@ impl<R: super::RpPairingSocketProvider> PairableHost<R> {
+         signbuf.extend_from_slice(&ltpk);
+         let signature = pairing_file.e_private_key.sign(&signbuf);
+ 
++        let mac = self.host_info.mac;
++        let bt_addr = mac
++            .iter()
++            .map(|b| format!("{b:02X}"))
++            .collect::<Vec<_>>()
++            .join(":");
+         let info = opack::plist_to_opack(&plist!({
+             "altIRK": self.host_info.alt_irk.to_vec(),
+-            "btAddr": "11:22:33:44:55:66",
+-            "mac": vec![0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66],
+-            "remotepairing_serial_number": "AAAAAAAAAAAA",
++            "btAddr": bt_addr.as_str(),
++            "mac": mac.to_vec(),
++            "remotepairing_serial_number": self.host_info.serial_number.as_str(),
+             "accountID": pairing_file.identifier.as_str(),
+             "remotepairing_udid": self.host_info.udid.as_str(),
+             "model": self.host_info.model.as_str(),

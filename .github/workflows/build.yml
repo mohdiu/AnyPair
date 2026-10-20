@@ -1,0 +1,80 @@
+name: AnyPair iOS build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anypair-ios-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .idevice-src/target
+          key: idevice-${{ runner.os }}-${{ hashFiles('scripts/build-idevice.sh', 'patches/*.patch') }}
+
+      - name: Build idevice (patched) for iOS
+        run: ./scripts/build-idevice.sh
+
+      - name: Generate Xcode project
+        run: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          xcodegen generate
+
+      - name: Build unsigned Release
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/Derived" \
+            CODE_SIGNING_ALLOWED=NO ENABLE_DEBUG_DYLIB=NO build
+
+      - name: Package IPA
+        id: package
+        run: |
+          set -euo pipefail
+          app="$(find "$RUNNER_TEMP/Derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app"
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")" = "AnyPair"
+          mkdir -p "$RUNNER_TEMP/pkg/Payload"
+          cp -R "$app" "$RUNNER_TEMP/pkg/Payload/"
+          (cd "$RUNNER_TEMP/pkg" && zip -qyr "$GITHUB_WORKSPACE/AnyPair-$version.ipa" Payload)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnyPair-unsigned-IPA
+          path: AnyPair-*.ipa
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" "AnyPair-$VERSION.ipa" --clobber
+          else
+            gh release create "v$VERSION" "AnyPair-$VERSION.ipa" --target "$GITHUB_SHA" \
+              --title "AnyPair $VERSION" --notes "Unsigned IPA. Sign it before installing."
+          fi

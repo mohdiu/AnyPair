@@ -1,0 +1,9 @@
+# Built by scripts/build-idevice.sh (CI builds it from source)
+Vendor/idevice/libidevice_ffi.a
+Vendor/idevice/idevice.h
+build/
+.idevice-src/
+*.xcodeproj/
+DerivedData/
+*.ipa
+.DS_Store
