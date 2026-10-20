@@ -22,6 +22,7 @@ final class PairingService: ObservableObject {
     private let advertiser = PairableHostAdvertiser()
     private let location = LocationKeepAlive()
     private let audio = SilentAudioKeepAlive()
+    private let liveActivity = PairingActivity()
     private var backgroundTask = UIBackgroundTaskIdentifier.invalid
 
     var isBusy: Bool {
@@ -43,6 +44,7 @@ final class PairingService: ObservableObject {
         guard !isBusy else { return }
         self.identity = identity
         phase = .preparing
+        liveActivity.start(hostName: identity.name)
 
         // One prompt at a time: Location, Notifications, then Local Network
         // (iOS shows that one when the listener starts).
@@ -69,6 +71,7 @@ final class PairingService: ObservableObject {
                 session.start()
                 phase = .advertising
             } catch {
+                liveActivity.end(.failed)
                 phase = .failed(error.localizedDescription)
             }
         }
@@ -78,6 +81,7 @@ final class PairingService: ObservableObject {
         session?.cancel()
         session = nil
         teardown()
+        liveActivity.end(.failed, immediately: true)
         phase = .idle
     }
 
@@ -91,13 +95,13 @@ final class PairingService: ObservableObject {
         switch event {
         case .connected:
             phase = .deviceConnected
-            Self.notify(
-                title: tr("تم اتصال الجهاز", "Device connected"),
-                body: tr("جارٍ إنشاء رمز الإقران…", "Generating the pairing code…")
-            )
+            liveActivity.update(.connected)
         case .pin(let pin):
             phase = .awaitingPIN(pin)
-            Self.notify(title: tr("رمز إقران AnyPair", "AnyPair pairing code"), body: pin, id: "anypair.pin", urgent: true)
+            liveActivity.update(.pin, pin: pin)
+            if !liveActivity.isRunning {
+                Self.notify(title: tr("رمز إقران AnyPair", "AnyPair pairing code"), body: pin, id: "anypair.pin", urgent: true)
+            }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case .succeeded(let data, let deviceName):
             session = nil
@@ -107,16 +111,15 @@ final class PairingService: ObservableObject {
                 let record = try store.save(data, deviceName: deviceName, identity: identity)
                 HostIdentity.lastUsed = identity
                 phase = .succeeded(record)
-                Self.notify(
-                    title: tr("تم الإقران", "Paired"),
-                    body: tr("ملف الإقران جاهز للمشاركة.", "Your pairing file is ready to share.")
-                )
+                liveActivity.end(.done)
             } catch {
+                liveActivity.end(.failed)
                 phase = .failed(tr("تم الإقران لكن فشل حفظ الملف: ", "Paired, but saving the file failed: ") + error.localizedDescription)
             }
         case .failed(let message):
             session = nil
             teardown()
+            liveActivity.end(.failed)
             phase = .failed(message)
         case .cancelled:
             break

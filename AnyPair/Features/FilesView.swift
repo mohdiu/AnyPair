@@ -13,8 +13,7 @@ struct FilesView: View {
                 if store.records.isEmpty {
                     ContentUnavailableView(
                         tr("لا توجد ملفات بعد", "No pairing files yet"),
-                        systemImage: "doc.badge.plus",
-                        description: Text(tr("بعد كل إقران ناجح يُحفظ الملف هنا.", "Each successful pairing is saved here."))
+                        systemImage: "doc.badge.plus"
                     )
                 } else {
                     List {
@@ -25,16 +24,13 @@ struct FilesView: View {
                             .onDelete { offsets in
                                 offsets.map { store.records[$0] }.forEach { store.delete($0) }
                             }
-                        } footer: {
-                            Text(tr("الملفات موجودة أيضًا في تطبيق الملفات ← على الآيفون ← AnyPair. يُنصح بملف مختلف لكل تطبيق.",
-                                    "Files are also in the Files app → On My iPhone → AnyPair. Use a different file for each app."))
                         }
                     }
                     .scrollContentBackground(.hidden)
                 }
             }
             .background(Color.black.ignoresSafeArea())
-            .navigationTitle(tr("ملفات الإقران", "Pairing files"))
+            .navigationTitle(tr("الملفات", "Files"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -57,7 +53,7 @@ struct FilesView: View {
                     Text(record.created.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(tr("كجهاز: ", "As: ") + "\(record.identity.name) (\(record.identity.model))".bidiIsolated)
+                    Text(record.identity.name.bidiIsolated)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -84,7 +80,7 @@ struct FilesView: View {
                 Button {
                     fileAction = .saveToFiles(record.url)
                 } label: {
-                    Label(tr("حفظ في الملفات", "Save to Files"), systemImage: "folder")
+                    Label(tr("الملفات", "Files"), systemImage: "folder")
                 }
                 .buttonStyle(.bordered)
             }

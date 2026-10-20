@@ -77,8 +77,9 @@ struct HostIdentity: Codable, Equatable {
             var rng = SystemRandomNumberGenerator()
             let mac = macs.randomElement(using: &rng)!
             let oui = appleOUIs.randomElement(using: &rng)!
+            let suffix = String((0..<4).map { _ in serialAlphabet.randomElement(using: &rng)! })
             let identity = HostIdentity(
-                name: mac.name,
+                name: "\(mac.name) \(suffix)",
                 model: mac.model,
                 identifier: UUID().uuidString.lowercased(),
                 serialNumber: String((0..<10).map { _ in serialAlphabet.randomElement(using: &rng)! }),
@@ -86,7 +87,8 @@ struct HostIdentity: Codable, Equatable {
                 udid: chipIDs.randomElement(using: &rng)! + "-" + String((0..<16).map { _ in hexAlphabet.randomElement(using: &rng)! })
             )
             guard let previous else { return identity }
-            if identity.model != previous.model,
+            if identity.name != previous.name,
+               identity.model != previous.model,
                identity.identifier != previous.identifier,
                identity.serialNumber != previous.serialNumber,
                identity.mac != previous.mac,

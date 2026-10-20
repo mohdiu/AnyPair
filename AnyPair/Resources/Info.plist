@@ -61,6 +61,8 @@ AnyPair uses the local network to appear as a pairable host in Developer Mode.</
 		<string>audio</string>
 		<string>location</string>
 	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

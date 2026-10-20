@@ -14,22 +14,16 @@ struct PairView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    steps
-                    statusCard
-                    actions
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(tr("هوية هذا الإقران", "This pairing’s identity"))
-                            .font(.subheadline.weight(.semibold))
-                        IdentityRows(identity: identity)
-                    }
-                    .card(padding: 16)
-                }
-                .padding(20)
+            VStack(spacing: 24) {
+                Spacer()
+                status
+                Spacer()
+                actions
             }
+            .padding(24)
+            .frame(maxWidth: .infinity)
             .background(Color.black.ignoresSafeArea())
-            .navigationTitle(tr("إقران", "Pair"))
+            .navigationTitle(identity.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -41,25 +35,23 @@ struct PairView: View {
             }
         }
         .interactiveDismissDisabled(service.isBusy)
+        .onAppear {
+            if service.phase == .idle {
+                service.start(identity: identity, useAudio: useAudio, useLocation: useLocation, store: store)
+            }
+        }
         .onDisappear { service.reset() }
         .onChange(of: service.phase) { _, phase in
             if case .succeeded = phase {
                 askToShare = true
             }
         }
-        .confirmationDialog(
-            tr("تم إنشاء ملف الإقران", "Pairing file created"),
-            isPresented: $askToShare,
-            titleVisibility: .visible
-        ) {
+        .confirmationDialog(tr("تم الإقران", "Paired"), isPresented: $askToShare, titleVisibility: .visible) {
             if let record {
                 Button(tr("مشاركة الملف", "Share file")) { fileAction = .share(record.url) }
                 Button(tr("حفظ في الملفات", "Save to Files")) { fileAction = .saveToFiles(record.url) }
             }
             Button(tr("لاحقًا", "Later"), role: .cancel) {}
-        } message: {
-            Text(tr("تبي تشارك الملف أو تحفظه في الملفات؟ تلقاه أيضًا في «ملفات الإقران» وفي تطبيق الملفات ← على الآيفون ← AnyPair.",
-                    "Share the file or save it to Files? It’s also kept under Pairing files and in Files → On My iPhone → AnyPair."))
         }
         .fileActionSheet($fileAction)
     }
@@ -69,106 +61,53 @@ struct PairView: View {
         return nil
     }
 
-    // MARK: Steps
-
-    private var steps: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            step(1, tr("اضغط «بدء الإقران» ووافق على الطلبات (الموقع، الإشعارات، الشبكة المحلية).",
-                       "Tap Start pairing and allow the requests (Location, Notifications, Local Network)."),
-                 done: service.phase != .idle && service.phase != .preparing)
-            step(2, tr("افتح الإعدادات ← الخصوصية والأمن ← نمط المطور، وتحت «الأجهزة الأخرى» اضغط «Pair with \(identity.name)».",
-                       "Open Settings → Privacy & Security → Developer Mode, and under Other Devices tap “Pair with \(identity.name)”."),
-                 done: service.deviceReached)
-            step(3, tr("أدخل رمز قفل الجهاز، ثم اكتب الرمز المكوّن من 6 أرقام (يصلك كإشعار وفي هذه الصفحة).",
-                       "Enter your passcode, then type the 6-digit code (sent as a notification and shown here)."),
-                 done: record != nil)
-        }
-        .card(padding: 16)
-    }
-
-    private func step(_ number: Int, _ text: String, done: Bool) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Group {
-                if done {
-                    Image(systemName: "checkmark").font(.caption.weight(.heavy))
-                } else {
-                    Text("\(number)").font(.caption.weight(.bold))
-                }
-            }
-            .foregroundStyle(.black)
-            .frame(width: 22, height: 22)
-            .background(done ? AnyPairTheme.statusGood : AnyPairTheme.statusWarn, in: Circle())
-            Text(text)
-                .font(.subheadline)
-        }
-    }
-
-    // MARK: Status
-
-    private var statusCard: some View {
-        VStack(spacing: 12) {
+    @ViewBuilder
+    private var status: some View {
+        VStack(spacing: 16) {
             switch service.phase {
-            case .idle:
-                Label(tr("جاهز", "Ready"), systemImage: "antenna.radiowaves.left.and.right")
-                    .foregroundStyle(.secondary)
-            case .preparing:
+            case .idle, .preparing, .advertising:
                 ProgressView()
-                Text(tr("جارٍ التجهيز…", "Preparing…"))
-            case .advertising:
-                ProgressView()
-                Text(tr("بانتظار نمط المطور…", "Waiting for Developer Mode…"))
+                    .controlSize(.large)
+                Text("Pair with \(identity.name)".bidiIsolated)
                     .font(.headline)
-                Text(tr("اضغط «Pair with \(identity.name)» ثم «إقران».", "Tap “Pair with \(identity.name)”, then Pair."))
-                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
             case .deviceConnected:
                 ProgressView()
-                Text(tr("تم اتصال الجهاز — الرمز قادم…", "Device connected — code coming…"))
-                    .font(.headline)
-            case .awaitingPIN(let pin):
-                Text(tr("اكتب هذا الرمز في الإعدادات", "Enter this code in Settings"))
-                    .font(.subheadline)
+                    .controlSize(.large)
+                Image(systemName: "lock.fill")
+                    .font(.title)
                     .foregroundStyle(.secondary)
+            case .awaitingPIN(let pin):
                 Text(pin.bidiIsolated)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .font(.system(size: 60, weight: .bold, design: .rounded))
                     .tracking(10)
                     .monospacedDigit()
                     .foregroundStyle(AnyPairTheme.accent)
                     .textSelection(.enabled)
-            case .succeeded(let record):
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.largeTitle)
+            case .succeeded:
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 72))
                     .foregroundStyle(AnyPairTheme.statusGood)
                 Text(tr("تم الإقران", "Paired"))
-                    .font(.title3.weight(.bold))
-                Text(record.fileName.bidiIsolated)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    .font(.title2.weight(.bold))
             case .failed(let message):
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(AnyPairTheme.statusWarn)
-                Text(tr("فشل الإقران", "Pairing failed"))
-                    .font(.title3.weight(.bold))
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 72))
+                    .foregroundStyle(AnyPairTheme.statusBad)
                 Text(message)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
         }
-        .frame(maxWidth: .infinity)
-        .card(padding: 24)
+        .animation(.easeInOut, value: service.phase)
     }
-
-    // MARK: Actions
 
     @ViewBuilder
     private var actions: some View {
         switch service.phase {
         case .idle, .failed:
-            Button(service.phase == .idle ? tr("بدء الإقران", "Start pairing") : tr("حاول مرة أخرى", "Try again")) {
+            Button(tr("إعادة المحاولة", "Try again")) {
                 service.start(identity: identity, useAudio: useAudio, useLocation: useLocation, store: store)
             }
             .buttonStyle(PillButtonStyle(filled: true))
@@ -176,7 +115,7 @@ struct PairView: View {
             HStack(spacing: 12) {
                 Button(tr("مشاركة", "Share")) { fileAction = .share(record.url) }
                     .buttonStyle(PillButtonStyle(filled: true))
-                Button(tr("حفظ في الملفات", "Save to Files")) { fileAction = .saveToFiles(record.url) }
+                Button(tr("الملفات", "Files")) { fileAction = .saveToFiles(record.url) }
                     .buttonStyle(PillButtonStyle())
             }
         case .preparing, .advertising, .deviceConnected, .awaitingPIN:
