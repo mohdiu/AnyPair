@@ -43,7 +43,7 @@ final class PairingSession: @unchecked Sendable {
         let identifier = identity.identifier.flatMap { strdup($0) }
         let serial = identity.serialNumber.flatMap { strdup($0) }
         let udid = identity.udid.flatMap { strdup($0) }
-        defer { [name, model, identifier, serial, udid].forEach { free($0) } }
+        defer { [name, model, identifier, serial, udid].forEach { free(UnsafeMutableRawPointer($0)) } }
         let mac = identity.mac ?? []
 
         let error = mac.withUnsafeBufferPointer { macBuffer in

@@ -19,7 +19,7 @@ final class PairingFileStore: ObservableObject {
 
     private static let indexKey = "anypair.records"
 
-    static var directory: URL {
+    nonisolated static var directory: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
