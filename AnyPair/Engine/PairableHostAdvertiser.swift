@@ -1,7 +1,7 @@
 import Foundation
 import Network
 
-/// Public-facing pairable-host listener (from AnyGPS).
+/// Public-facing pairable-host listener.
 ///
 /// Uses Network.framework `NWListener` + Bonjour (what iOS 27 Developer Mode
 /// browses). Inbound connections are relayed to the app's loopback socket on

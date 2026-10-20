@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 
 /// A light location session so iOS keeps AnyPair running while the user is in
-/// Settings › Developer Mode (from AnyGPS).
+/// Settings › Developer Mode.
 final class LocationKeepAlive: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var authorizationWaiter: CheckedContinuation<Void, Never>?

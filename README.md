@@ -8,7 +8,7 @@
 
 ## English
 
-AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+, no computer) and lets you share it or save it to Files, so you can import it into other apps (AnyGPS, StikDebug, …).
+AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+, no computer) and lets you share it or save it to Files, so you can import it into other apps.
 
 ### Features
 
@@ -37,7 +37,7 @@ AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+
 
 ### How it works
 
-AnyPair uses the open-source [idevice](https://github.com/jkcoxson/idevice) library's pairable-host (device-initiated pairing) flow, with the Bonjour + loopback relay from AnyGPS / [Locus](https://github.com/ChrisMack32/Locus). `patches/idevice-random-identity.patch` adds `pairable_host_prepare_custom`, which lets the app set the identifier, serial number, MAC and UDID the iPhone stores for each pairing. CI builds idevice from source at a pinned commit with that patch (`scripts/build-idevice.sh`).
+AnyPair uses the open-source [idevice](https://github.com/jkcoxson/idevice) library's pairable-host (device-initiated pairing) flow. `patches/idevice-random-identity.patch` adds `pairable_host_prepare_custom`, which lets the app set the identifier, serial number, MAC and UDID the iPhone stores for each pairing. CI builds idevice from source at a pinned commit with that patch (`scripts/build-idevice.sh`).
 
 ### Build from source
 
@@ -54,7 +54,7 @@ xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
 
 ## العربية
 
-تطبيق مخصص للإقران فقط: يُنشئ **ملف إقران (RPPairing)** من الآيفون نفسه (iOS 27 وأحدث، بدون كمبيوتر)، وبعدها تشاركه أو تحفظه في الملفات وتستخدمه في تطبيقات ثانية (<span dir="ltr">AnyGPS</span>، <span dir="ltr">StikDebug</span>، …).
+تطبيق مخصص للإقران فقط: يُنشئ **ملف إقران (RPPairing)** من الآيفون نفسه (iOS 27 وأحدث، بدون كمبيوتر)، وبعدها تشاركه أو تحفظه في الملفات وتستخدمه في تطبيقات ثانية.
 
 ### المميزات
 
@@ -83,10 +83,10 @@ xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
 
 ### كيف يعمل
 
-يستخدم مكتبة <a dir="ltr" href="https://github.com/jkcoxson/idevice">idevice</a> مفتوحة المصدر (الإقران اللي يبدأ من الجهاز)، مع طريقة الإعلان والتمرير من <span dir="ltr">AnyGPS / Locus</span>. التعديل في <span dir="ltr">`patches/idevice-random-identity.patch`</span> يضيف دالة تسمح للتطبيق يحدد المعرّف والرقم التسلسلي والـ <span dir="ltr">MAC</span> والـ <span dir="ltr">UDID</span> لكل إقران.
+يستخدم مكتبة <a dir="ltr" href="https://github.com/jkcoxson/idevice">idevice</a> مفتوحة المصدر (الإقران اللي يبدأ من الجهاز). التعديل في <span dir="ltr">`patches/idevice-random-identity.patch`</span> يضيف دالة تسمح للتطبيق يحدد المعرّف والرقم التسلسلي والـ <span dir="ltr">MAC</span> والـ <span dir="ltr">UDID</span> لكل إقران.
 
 </div>
 
 ## License
 
-[MIT](LICENSE). Pairing code based on AnyGPS / [Locus](https://github.com/ChrisMack32/Locus). Uses the MIT-licensed [idevice](https://github.com/jkcoxson/idevice).
+[MIT](LICENSE). Uses the MIT-licensed [idevice](https://github.com/jkcoxson/idevice).
