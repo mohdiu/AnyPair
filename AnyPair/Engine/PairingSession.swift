@@ -152,6 +152,7 @@ final class PairingSession: @unchecked Sendable {
             return
         }
 
+        AppLog.write("loopback accepted, running pair-setup")
         onEvent(.connected)
 
         var peer: UnsafeMutablePointer<RpPairingPeerDeviceC>?
@@ -161,6 +162,7 @@ final class PairingSession: @unchecked Sendable {
 
         if let error {
             let failure = PairingError(consuming: error)
+            AppLog.write("pair-setup error: \(failure.message)")
             onEvent(isCancelled ? .cancelled : .failed(failure.message))
             return
         }

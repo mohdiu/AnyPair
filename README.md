@@ -1,8 +1,8 @@
 # AnyPair
 
-**Version 1.2.0**
+**Version 1.3.0**
 
-[**Download IPA · v1.2.0**](https://github.com/mohdiu/AnyPair/releases/download/v1.2.0/AnyPair-1.2.0.ipa)
+[**Download IPA · v1.3.0**](https://github.com/mohdiu/AnyPair/releases/download/v1.3.0/AnyPair-1.3.0.ipa)
 
 [English](#english) · [العربية](#العربية)
 
@@ -13,7 +13,7 @@ AnyPair does one thing: it creates an **RPPairing file** on your iPhone (iOS 27+
 ### Features
 
 - Pair from the phone itself: AnyPair shows up in **Settings → Privacy & Security → Developer Mode → Other Devices**.
-- **Random values for each pairing** (on by default): a new name, Mac model, serial number, MAC address and identifier every time — instead of the fixed `AAAAAAAAAAAA` / `11:22:33:44:55:66` — and never the same values as the previous pairing.
+- **Random values for each pairing** (on by default): a new name, serial number, MAC address and identifier every time — instead of the fixed `AAAAAAAAAAAA` / `11:22:33:44:55:66` — and never the same values as the previous pairing.
 - After pairing it asks whether to **share** the file or **save it to Files**. Every file is also kept in the app and in Files → On My iPhone → AnyPair.
 - Random, editable name (🎲 makes a new one each tap), so every pairing shows up separately in Developer Mode.
 - The 6-digit code arrives as a notification while you are in Settings.
@@ -59,7 +59,7 @@ xcodebuild -project AnyPair.xcodeproj -scheme AnyPair -configuration Release \
 ### المميزات
 
 - الإقران من الجوال نفسه: يظهر <span dir="ltr">AnyPair</span> في **الإعدادات ← الخصوصية والأمن ← نمط المطور ← الأجهزة الأخرى**.
-- **قيم عشوائية لكل إقران** (مفعّلة افتراضيًا): اسم وموديل ماك ورقم تسلسلي وعنوان <span dir="ltr">MAC</span> ومعرّف جديد في كل مرة بدل القيم الثابتة <span dir="ltr">`AAAAAAAAAAAA`</span> — ولا تتكرر قيم الإقران السابق.
+- **قيم عشوائية لكل إقران** (مفعّلة افتراضيًا): اسم ورقم تسلسلي وعنوان <span dir="ltr">MAC</span> ومعرّف جديد في كل مرة بدل القيم الثابتة <span dir="ltr">`AAAAAAAAAAAA`</span> — ولا تتكرر قيم الإقران السابق.
 - بعد الإقران يسألك: تبي **تشارك** الملف أو **تحفظه في الملفات**؟ وكل ملف محفوظ أيضًا داخل التطبيق وفي تطبيق الملفات ← على الآيفون ← <span dir="ltr">AnyPair</span>.
 - اسم عشوائي تقدر تعدّله (🎲 يولّد اسم جديد كل ضغطة)، عشان كل إقران يظهر باسم مختلف في نمط المطور.
 - الرمز المكوّن من 6 أرقام يوصلك كإشعار وأنت في الإعدادات.

@@ -76,7 +76,8 @@ struct HostIdentity: Codable, Equatable {
             let suffix = String((0..<4).map { _ in serialAlphabet.randomElement(using: &rng)! })
             let identity = HostIdentity(
                 name: "\(mac.name) \(suffix)",
-                model: mac.model,
+                // Same model as AnyGPS, which pairs fine; only the values iOS stores per host change.
+                model: defaultModel,
                 identifier: UUID().uuidString.lowercased(),
                 serialNumber: String((0..<12).map { _ in serialAlphabet.randomElement(using: &rng)! }),
                 mac: oui + (0..<3).map { _ in UInt8.random(in: 0...255, using: &rng) },
@@ -84,7 +85,6 @@ struct HostIdentity: Codable, Equatable {
             )
             guard let previous else { return identity }
             if identity.name != previous.name,
-               identity.model != previous.model,
                identity.identifier != previous.identifier,
                identity.serialNumber != previous.serialNumber,
                identity.mac != previous.mac {

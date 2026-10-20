@@ -41,41 +41,50 @@ final class PairableHostAdvertiser {
                 case .ready:
                     let p = listener.port?.rawValue ?? 0
                     self?.publishedPort = p
-                    NSLog("[AnyPair] NWListener ready on port %u (relay → 127.0.0.1:%u)", p, port)
+                    AppLog.write("listener ready on port \(p), relay → 127.0.0.1:\(port)")
                 case .failed(let error):
-                    NSLog("[AnyPair] NWListener failed: %@", String(describing: error))
+                    AppLog.write("listener failed: \(error)")
                 case .cancelled:
-                    NSLog("[AnyPair] NWListener cancelled")
+                    AppLog.write("listener cancelled")
                 default:
                     break
                 }
             }
 
             listener.newConnectionHandler = { [weak self] connection in
-                NSLog(
-                    "[AnyPair] NWListener accepted %@",
-                    String(describing: connection.endpoint)
-                )
+                AppLog.write("device connected from \(connection.endpoint)")
                 self?.relay(connection)
             }
 
             listener.start(queue: .global(qos: .userInitiated))
             self.listener = listener
-            NSLog("[AnyPair] NWListener starting; will relay → 127.0.0.1:%u", port)
+            AppLog.write("advertising \(serviceIdentifier)")
         } catch {
-            NSLog("[AnyPair] NWListener start failed: %@", error.localizedDescription)
+            AppLog.write("listener start failed: \(error)")
         }
     }
 
     func stop() {
-        activeRelay?.cancel()
+        activeRelay?.cancel(reason: "stop")
         activeRelay = nil
         listener?.cancel()
         listener = nil
     }
 
+    /// Stops advertising but lets the current relay finish delivering the last
+    /// message; the device closes it (or it is cut after `timeout`).
+    func stopAfterRelayDrains(timeout: TimeInterval = 10) {
+        listener?.cancel()
+        listener = nil
+        guard let relay = activeRelay else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { [weak self] in
+            relay.cancel(reason: "drain timeout")
+            if self?.activeRelay === relay { self?.activeRelay = nil }
+        }
+    }
+
     private func relay(_ inbound: NWConnection) {
-        activeRelay?.cancel()
+        activeRelay?.cancel(reason: "replaced by a new connection")
         let rustPort = loopbackPort
         guard rustPort > 0, let nwPort = NWEndpoint.Port(rawValue: rustPort) else {
             inbound.cancel()
@@ -94,10 +103,14 @@ final class PairableHostAdvertiser {
 }
 
 /// Bidirectional byte pump between Developer Mode and the loopback listener.
+/// An end-of-stream on one side is passed on as a half-close (FIN) so the last
+/// message is delivered before the device closes its side.
 private final class RelayPipe {
     private let inbound: NWConnection
     private let outbound: NWConnection
     private let queue = DispatchQueue(label: "anypair.relay")
+    private var cancelled = false
+    private var finished = 0
 
     init(inbound: NWConnection, outbound: NWConnection) {
         self.inbound = inbound
@@ -106,21 +119,23 @@ private final class RelayPipe {
 
     func start() {
         inbound.stateUpdateHandler = { [weak self] state in
-            if case .failed = state { self?.cancel() }
-            if case .cancelled = state { self?.cancel() }
+            switch state {
+            case .failed(let error): self?.cancel(reason: "device connection failed: \(error)")
+            case .cancelled: self?.cancel(reason: "device connection cancelled")
+            default: break
+            }
         }
         outbound.stateUpdateHandler = { [weak self] state in
             guard let self else { return }
             switch state {
             case .ready:
-                NSLog("[AnyPair] relay connected to loopback")
-                self.pump(from: self.inbound, to: self.outbound)
-                self.pump(from: self.outbound, to: self.inbound)
+                AppLog.write("relay connected to loopback")
+                self.pump(from: self.inbound, to: self.outbound, name: "device→host")
+                self.pump(from: self.outbound, to: self.inbound, name: "host→device")
             case .failed(let error):
-                NSLog("[AnyPair] relay to loopback failed: %@", String(describing: error))
-                self.cancel()
+                self.cancel(reason: "loopback failed: \(error)")
             case .cancelled:
-                self.cancel()
+                self.cancel(reason: "loopback cancelled")
             default:
                 break
             }
@@ -129,37 +144,46 @@ private final class RelayPipe {
         outbound.start(queue: queue)
     }
 
-    func cancel() {
-        inbound.cancel()
-        outbound.cancel()
+    func cancel(reason: String) {
+        queue.async { [self] in
+            guard !cancelled else { return }
+            cancelled = true
+            AppLog.write("relay closed: \(reason)")
+            inbound.cancel()
+            outbound.cancel()
+        }
     }
 
-    private func pump(from: NWConnection, to: NWConnection) {
+    private func pump(from: NWConnection, to: NWConnection, name: String) {
         from.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
             guard let self else { return }
             if let error {
-                NSLog("[AnyPair] relay receive error: %@", String(describing: error))
-                self.cancel()
+                self.cancel(reason: "\(name) receive error: \(error)")
                 return
             }
-            if let data, !data.isEmpty {
-                to.send(content: data, completion: .contentProcessed { sendError in
-                    if let sendError {
-                        NSLog("[AnyPair] relay send error: %@", String(describing: sendError))
-                        self.cancel()
-                        return
-                    }
-                    if isComplete {
-                        self.cancel()
-                    } else {
-                        self.pump(from: from, to: to)
-                    }
-                })
-            } else if isComplete {
-                self.cancel()
-            } else {
-                self.pump(from: from, to: to)
+            let count = data?.count ?? 0
+            guard count > 0 || isComplete else {
+                self.pump(from: from, to: to, name: name)
+                return
             }
+            AppLog.write("\(name) \(count) bytes\(isComplete ? " + end" : "")")
+            // Forward the bytes; on end-of-stream also send FIN to the other side.
+            to.send(content: count > 0 ? data : nil, contentContext: isComplete ? .finalMessage : .defaultMessage, isComplete: isComplete, completion: .contentProcessed { sendError in
+                if let sendError {
+                    self.cancel(reason: "\(name) send error: \(sendError)")
+                    return
+                }
+                if isComplete {
+                    self.queue.async {
+                        self.finished += 1
+                        if self.finished == 2 {
+                            self.cancel(reason: "both sides finished")
+                        }
+                    }
+                } else {
+                    self.pump(from: from, to: to, name: name)
+                }
+            })
         }
     }
 }

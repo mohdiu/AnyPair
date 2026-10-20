@@ -26,11 +26,13 @@ struct SaveToFilesSheet: UIViewControllerRepresentable {
 /// What to present for a saved pairing file.
 enum FileAction: Identifiable {
     case share(URL)
+    case shareMany([URL])
     case saveToFiles(URL)
 
     var id: String {
         switch self {
         case .share(let url): return "share:" + url.path
+        case .shareMany(let urls): return "shareMany:" + urls.map(\.path).joined()
         case .saveToFiles(let url): return "files:" + url.path
         }
     }
@@ -42,6 +44,7 @@ extension View {
             Group {
                 switch action {
                 case .share(let url): ShareSheet(items: [url])
+                case .shareMany(let urls): ShareSheet(items: urls)
                 case .saveToFiles(let url): SaveToFilesSheet(url: url)
                 }
             }

@@ -38,12 +38,12 @@ struct FilesView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        fileAction = .share(PairingLog.url)
+                        fileAction = .shareMany(AppLog.shareURLs)
                     } label: {
                         Image(systemName: "doc.text.magnifyingglass")
                     }
                     .accessibilityLabel(tr("السجل", "Log"))
-                    .disabled(!FileManager.default.fileExists(atPath: PairingLog.url.path))
+                    .disabled(AppLog.shareURLs.isEmpty)
                 }
             }
         }

@@ -43,6 +43,8 @@ final class PairingService: ObservableObject {
         guard !isBusy else { return }
         self.identity = identity
         phase = .preparing
+        AppLog.reset()
+        AppLog.write("start: name=\(identity.name) model=\(identity.model) serial=\(identity.serialString) mac=\(identity.macString) id=\(identity.identifier ?? "-")")
 
         // One prompt at a time: Location, Notifications, then Local Network
         // (iOS shows that one when the listener starts).
@@ -69,6 +71,7 @@ final class PairingService: ObservableObject {
                 session.start()
                 phase = .advertising
             } catch {
+                AppLog.write("prepare failed: \(error.localizedDescription)")
                 phase = .failed(error.localizedDescription)
             }
         }
@@ -90,14 +93,17 @@ final class PairingService: ObservableObject {
         guard session != nil else { return }
         switch event {
         case .connected:
+            AppLog.write("pair-setup started")
             phase = .deviceConnected
         case .pin(let pin):
+            AppLog.write("PIN shown")
             phase = .awaitingPIN(pin)
             Self.notify(title: tr("رمز إقران AnyPair", "AnyPair pairing code"), body: pin, id: "anypair.pin", urgent: true)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case .succeeded(let data, let deviceName):
+            AppLog.write("pair-setup finished on our side (\(data.count) bytes)")
             session = nil
-            teardown()
+            teardown(drain: true)
             let identity = identity ?? .fixed(name: "AnyPair")
             do {
                 let record = try store.save(data, deviceName: deviceName, identity: identity)
@@ -107,6 +113,7 @@ final class PairingService: ObservableObject {
                 phase = .failed(tr("تم الإقران لكن فشل حفظ الملف: ", "Paired, but saving the file failed: ") + error.localizedDescription)
             }
         case .failed(let message):
+            AppLog.write("failed: \(message)")
             session = nil
             teardown()
             phase = .failed(message)
@@ -115,8 +122,22 @@ final class PairingService: ObservableObject {
         }
     }
 
-    private func teardown() {
-        advertiser.stop()
+    /// `drain`: after a success, let the last message reach the device and keep
+    /// the app alive a little longer before stopping everything.
+    private func teardown(drain: Bool = false) {
+        if drain {
+            advertiser.stopAfterRelayDrains(timeout: 10)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard let self, self.session == nil, !self.isBusy else { return }
+                self.stopKeepAlive()
+            }
+        } else {
+            advertiser.stop()
+            stopKeepAlive()
+        }
+    }
+
+    private func stopKeepAlive() {
         UIApplication.shared.isIdleTimerDisabled = false
         location.stop()
         audio.stop()

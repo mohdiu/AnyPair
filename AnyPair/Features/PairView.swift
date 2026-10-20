@@ -101,6 +101,12 @@ struct PairView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                Button {
+                    fileAction = .shareMany(AppLog.shareURLs)
+                } label: {
+                    Label(tr("مشاركة السجل", "Share log"), systemImage: "doc.text")
+                }
+                .buttonStyle(.bordered)
             }
         }
         .animation(.easeInOut, value: service.phase)
